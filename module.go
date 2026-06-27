@@ -1,11 +1,9 @@
-// Package module parses repository remotes into Go module paths and derives the
-// name variants a project uses: the raw name, a Go identifier, and an
+// Package module parses a git remote URL into a Go module path and the name
+// variants derived from it: the repository name, a Go identifier, and an
 // environment-variable prefix.
 //
-// It is pure string logic with no I/O, reusable by any domain that needs to
-// reason about a project's identity. The rename domain uses it to turn the git
-// origin remote into the module path that Go requires and to compute the token
-// variants the rewrite engine substitutes.
+// It is pure string logic with no I/O — a reusable leaf library for any caller
+// that needs to reason about a project's identity from its remote.
 package module
 
 import (
@@ -18,7 +16,7 @@ type (
 	Remote string
 	// Path is a Go module path, e.g. "github.com/gomatic/template.cli".
 	Path string
-	// Name is a project's short name — the binary and the cmd/<name> directory,
+	// Name is a project's short name — the last segment of the module path,
 	// e.g. "template.cli".
 	Name string
 	// Identifier is a Name reduced to a valid Go identifier, e.g. "templatecli".
@@ -40,7 +38,9 @@ func Parse(remote Remote) (Path, error) {
 	raw = stripUserinfo(raw)
 	raw = scpToPath(raw)
 	if !valid(raw) {
-		return "", ErrInvalidRemote.With(nil, string(remote))
+		// raw has already had any "user:token@" userinfo stripped, so embedding
+		// it cannot leak credentials into the error text.
+		return "", ErrInvalidRemote.With(nil, raw)
 	}
 	return Path(raw), nil
 }

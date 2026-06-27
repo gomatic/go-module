@@ -49,6 +49,18 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestParseDoesNotLeakCredentials(t *testing.T) {
+	t.Parallel()
+	want, must := assert.New(t), require.New(t)
+
+	_, err := Parse("https://user:s3cr3t-token@example.com/bad")
+
+	must.Error(err)
+	want.ErrorIs(err, ErrInvalidRemote)
+	want.NotContains(err.Error(), "s3cr3t-token")
+	want.NotContains(err.Error(), "user")
+}
+
 func TestPathRepo(t *testing.T) {
 	t.Parallel()
 	want := assert.New(t)
