@@ -21,7 +21,11 @@ func TestParse(t *testing.T) {
 	}{
 		{name: "ssh scp form", remote: "git@example.com:org/before.cli.git", want: "example.com/org/before.cli"},
 		{name: "https url", remote: "https://example.com/org/before.cli.git", want: "example.com/org/before.cli"},
-		{name: "https url without .git", remote: "https://example.com/org/after.cli", want: "example.com/org/after.cli"},
+		{
+			name:   "https url without .git",
+			remote: "https://example.com/org/after.cli",
+			want:   "example.com/org/after.cli",
+		},
 		{name: "ssh url with userinfo", remote: "ssh://git@example.com/org/tool", want: "example.com/org/tool"},
 		{name: "surrounding whitespace", remote: "  git@example.com:org/tool.git\n", want: "example.com/org/tool"},
 		{name: "nested group", remote: "git@gitlab.example:group/sub/repo.git", want: "gitlab.example/group/sub/repo"},
