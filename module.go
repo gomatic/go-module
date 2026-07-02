@@ -57,13 +57,15 @@ func (p Path) Repo() Name {
 // Identifier reduces the name to a valid lowercase Go identifier by dropping
 // every character that is not a lowercase letter or digit.
 func (n Name) Identifier() Identifier {
-	return Identifier(strings.Map(keepIdentifier, strings.ToLower(string(n))))
+	lowered := strings.ToLower(string(n))
+	return Identifier(strings.Map(func(r rune) rune { return rune(char(r).identifier()) }, lowered))
 }
 
 // EnvPrefix reduces the name to an environment-variable prefix by uppercasing it
 // and mapping every non-alphanumeric character to an underscore.
 func (n Name) EnvPrefix() EnvPrefix {
-	return EnvPrefix(strings.Map(toEnv, strings.ToUpper(string(n))))
+	uppered := strings.ToUpper(string(n))
+	return EnvPrefix(strings.Map(func(r rune) rune { return rune(char(r).env()) }, uppered))
 }
 
 // rawRemote is a remote URL string partway through normalization into a module path.
@@ -107,18 +109,22 @@ func valid(raw rawRemote) bool {
 	return len(segments) >= 3 && !slices.Contains(segments, "")
 }
 
-// keepIdentifier keeps lowercase letters and digits, dropping everything else.
-func keepIdentifier(r rune) rune {
-	if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-		return r
+// char is a single character of a Name being reduced to one of its variants.
+type char rune
+
+// identifier keeps a lowercase letter or digit and drops everything else,
+// following the strings.Map convention that a negative result drops the rune.
+func (c char) identifier() char {
+	if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
+		return c
 	}
 	return -1
 }
 
-// toEnv keeps uppercase letters and digits and maps everything else to '_'.
-func toEnv(r rune) rune {
-	if (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
-		return r
+// env keeps an uppercase letter or digit and maps everything else to '_'.
+func (c char) env() char {
+	if (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') {
+		return c
 	}
 	return '_'
 }
