@@ -34,10 +34,10 @@ type (
 func Parse(remote Remote) (Path, error) {
 	raw := strings.TrimSpace(string(remote))
 	raw = strings.TrimSuffix(raw, ".git")
-	raw = stripScheme(raw)
-	raw = stripUserinfo(raw)
-	raw = scpToPath(raw)
-	if !valid(raw) {
+	raw = stripScheme(rawParam(raw))
+	raw = stripUserinfo(rawParam(raw))
+	raw = scpToPath(rawParam(raw))
+	if !valid(rawParam(raw)) {
 		// raw has already had any "user:token@" userinfo stripped, so embedding
 		// it cannot leak credentials into the error text.
 		return "", ErrInvalidRemote.With(nil, raw)
@@ -66,41 +66,44 @@ func (n Name) EnvPrefix() EnvPrefix {
 	return EnvPrefix(strings.Map(toEnv, strings.ToUpper(string(n))))
 }
 
+// rawParam names the raw parameter of stripScheme; rename it to the real domain concept.
+type rawParam string
+
 // stripScheme removes a leading "scheme://" when present.
-func stripScheme(raw string) string {
-	if _, after, found := strings.Cut(raw, "://"); found {
+func stripScheme(raw rawParam) string {
+	if _, after, found := strings.Cut(string(raw), "://"); found {
 		return after
 	}
-	return raw
+	return string(raw)
 }
 
 // stripUserinfo removes a leading "user@" when present.
-func stripUserinfo(raw string) string {
-	if _, after, found := strings.Cut(raw, "@"); found {
+func stripUserinfo(raw rawParam) string {
+	if _, after, found := strings.Cut(string(raw), "@"); found {
 		return after
 	}
-	return raw
+	return string(raw)
 }
 
 // scpToPath converts the "host:org/repo" separator of the scp-like SSH form into
 // "host/org/repo". A colon that appears before the first slash is the scp
 // separator; a colon after a slash (or none) is left untouched.
-func scpToPath(raw string) string {
-	colon := strings.IndexByte(raw, ':')
-	slash := strings.IndexByte(raw, '/')
+func scpToPath(raw rawParam) string {
+	colon := strings.IndexByte(string(raw), ':')
+	slash := strings.IndexByte(string(raw), '/')
 	if colon >= 0 && (slash < 0 || colon < slash) {
-		return raw[:colon] + "/" + raw[colon+1:]
+		return string(raw)[:colon] + "/" + string(raw)[colon+1:]
 	}
-	return raw
+	return string(raw)
 }
 
 // valid reports whether raw is a host/org/repo path: at least three non-empty,
 // space-free segments.
-func valid(raw string) bool {
-	if strings.ContainsAny(raw, " \t") {
+func valid(raw rawParam) bool {
+	if strings.ContainsAny(string(raw), " \t") {
 		return false
 	}
-	segments := strings.Split(raw, "/")
+	segments := strings.Split(string(raw), "/")
 	return len(segments) >= 3 && !slices.Contains(segments, "")
 }
 
