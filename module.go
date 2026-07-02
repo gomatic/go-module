@@ -34,10 +34,10 @@ type (
 func Parse(remote Remote) (Path, error) {
 	raw := strings.TrimSpace(string(remote))
 	raw = strings.TrimSuffix(raw, ".git")
-	raw = stripScheme(rawParam(raw))
-	raw = stripUserinfo(rawParam(raw))
-	raw = scpToPath(rawParam(raw))
-	if !valid(rawParam(raw)) {
+	raw = stripScheme(rawRemote(raw))
+	raw = stripUserinfo(rawRemote(raw))
+	raw = scpToPath(rawRemote(raw))
+	if !valid(rawRemote(raw)) {
 		// raw has already had any "user:token@" userinfo stripped, so embedding
 		// it cannot leak credentials into the error text.
 		return "", ErrInvalidRemote.With(nil, raw)
@@ -66,11 +66,11 @@ func (n Name) EnvPrefix() EnvPrefix {
 	return EnvPrefix(strings.Map(toEnv, strings.ToUpper(string(n))))
 }
 
-// rawParam names the raw parameter of stripScheme; rename it to the real domain concept.
-type rawParam string
+// rawRemote is a remote URL string partway through normalization into a module path.
+type rawRemote string
 
 // stripScheme removes a leading "scheme://" when present.
-func stripScheme(raw rawParam) string {
+func stripScheme(raw rawRemote) string {
 	if _, after, found := strings.Cut(string(raw), "://"); found {
 		return after
 	}
@@ -78,7 +78,7 @@ func stripScheme(raw rawParam) string {
 }
 
 // stripUserinfo removes a leading "user@" when present.
-func stripUserinfo(raw rawParam) string {
+func stripUserinfo(raw rawRemote) string {
 	if _, after, found := strings.Cut(string(raw), "@"); found {
 		return after
 	}
@@ -88,7 +88,7 @@ func stripUserinfo(raw rawParam) string {
 // scpToPath converts the "host:org/repo" separator of the scp-like SSH form into
 // "host/org/repo". A colon that appears before the first slash is the scp
 // separator; a colon after a slash (or none) is left untouched.
-func scpToPath(raw rawParam) string {
+func scpToPath(raw rawRemote) string {
 	colon := strings.IndexByte(string(raw), ':')
 	slash := strings.IndexByte(string(raw), '/')
 	if colon >= 0 && (slash < 0 || colon < slash) {
@@ -99,7 +99,7 @@ func scpToPath(raw rawParam) string {
 
 // valid reports whether raw is a host/org/repo path: at least three non-empty,
 // space-free segments.
-func valid(raw rawParam) bool {
+func valid(raw rawRemote) bool {
 	if strings.ContainsAny(string(raw), " \t") {
 		return false
 	}
