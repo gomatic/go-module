@@ -1,6 +1,7 @@
 package module
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -87,4 +88,29 @@ func TestNameEnvPrefix(t *testing.T) {
 
 	want.Equal(EnvPrefix("BEFORE_CLI"), Name("before.cli").EnvPrefix())
 	want.Equal(EnvPrefix("MY_APP2"), Name("my-app2").EnvPrefix())
+}
+
+// TestErrInvalidRemoteIsTheOnlyFailureParseReports names ErrInvalidRemote's
+// claim. Parse turns a git remote into a module path, and every way that can
+// fail is the same kind of failure — the remote is not parseable — so a caller
+// needs exactly one sentinel to branch on, matched with errors.Is rather than
+// by message. Reporting different sentinels, or an unwrapped error, would make
+// a caller either miss cases or resort to string matching.
+func TestErrInvalidRemoteIsTheOnlyFailureParseReports(t *testing.T) {
+	t.Parallel()
+
+	for _, remote := range []Remote{
+		"",
+		"example.com/onlyone",
+		"https://example.com//repo.git",
+		"git@example.com:org/wid get",
+	} {
+		_, err := Parse(remote)
+
+		require.Error(t, err, "remote %q must not parse", remote)
+		assert.ErrorIs(t, err, ErrInvalidRemote,
+			"every parse failure must carry the one sentinel a caller branches on")
+	}
+
+	assert.NotErrorIs(t, errors.New("unrelated"), ErrInvalidRemote)
 }
